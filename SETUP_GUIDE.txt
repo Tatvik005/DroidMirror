@@ -1,0 +1,234 @@
+================================================================================
+                    DROIDMIRROR MAC - COMPLETE SETUP GUIDE
+       Apple Silicon Hardware-Accelerated Android Remote Control (macOS)
+================================================================================
+
+TABLE OF CONTENTS
+-----------------
+1. Prerequisites & System Requirements
+2. One-Time Android Phone Configuration
+3. Manufacturer-Specific Settings (Samsung, Xiaomi, OnePlus, etc.)
+4. Mac Installation & First Launch
+5. Using the 3 Connection Switches
+6. Compact Floating Phone Window Mode
+7. Drag-and-Drop Installation & File Transfer
+8. Keyboard Shortcuts & Gestures
+9. Automated Test & Simulation Commands
+10. Common Troubleshooting & FAQs
+
+================================================================================
+1. PREREQUISITES & SYSTEM REQUIREMENTS
+================================================================================
+
+- Mac:
+  • macOS 14.0 (Sonoma), macOS 15.0 (Sequoia), or newer.
+  • Apple Silicon Mac (M1, M2, M3, M4, Pro, Max, Ultra).
+  • Xcode Command Line Tools installed. If you don't have it, open Terminal
+    and run:
+      xcode-select --install
+
+- Android Device:
+  • Any Android smartphone or tablet running Android 5.0 up to Android 16.
+  • Standard USB-C or Micro-USB cable (for initial setup or wired mode).
+
+================================================================================
+2. ONE-TIME ANDROID PHONE CONFIGURATION
+================================================================================
+
+Step 1: Enable Developer Options
+  1. Open your phone's "Settings" app.
+  2. Scroll down and tap "About phone" (or "About device").
+  3. Locate "Build number" (on some phones: Settings > About > Software information).
+  4. Tap "Build number" rapidly 7 times until you see the message:
+     "You are now a developer!"
+
+Step 2: Enable USB Debugging
+  1. Go back to main "Settings".
+  2. Tap "System" or "Additional settings" > "Developer options".
+  3. Find "USB debugging" and toggle it ON.
+
+Step 3: Authorize Your Mac
+  1. Plug your phone into your Mac with a USB cable.
+  2. Unlock your phone screen.
+  3. A prompt will appear: "Allow USB debugging from this computer?".
+  4. Check the box "Always allow from this computer" and tap "Allow".
+
+================================================================================
+3. MANUFACTURER-SPECIFIC SETTINGS
+================================================================================
+
+Some phone manufacturers include extra security skins that require a toggle:
+
+* SAMSUNG GALAXY (OneUI 5 / 6 / 7):
+  - Lockscreen PIN: Samsung Knox blanks the video output while locked for
+    privacy. Type your numeric PIN or password directly on your Mac keyboard
+    and press Enter to unlock the phone!
+  - Auto Blocker (OneUI 6+): If commands are blocked, check Settings > Security
+    and privacy > Auto Blocker, and ensure USB debugging is allowed.
+
+* XIAOMI / REDMI / POCO (HyperOS / MIUI):
+  - Mouse & Keyboard Input: Xiaomi blocks simulated clicks by default!
+    Go to Settings > Additional settings > Developer options:
+      1. Turn ON "USB debugging".
+      2. Turn ON "USB debugging (Security settings)"  <-- MANDATORY for clicks!
+         (Note: Requires an active SIM card in the phone to toggle once).
+      3. Turn ON "Install via USB" if you want drag-and-drop APK installs.
+
+* OPPO / REALME / ONEPLUS (ColorOS / OxygenOS / RealmeUI):
+  - OTG Auto-Off: ColorOS shuts off USB OTG after 10 minutes of inactivity.
+    If the cable disconnects, re-enable "OTG connection" in Settings.
+  - Permission Monitoring: In Developer options, enable
+    "Disable permission monitoring" if clicks or taps are ignored.
+  - Turn ON "Allow ADB debugging in charge only mode".
+
+* VIVO / IQOO (FuntouchOS / OriginOS):
+  - In Developer options, enable "USB debugging" and "Input simulation"
+    (or "USB debugging (Security settings)").
+  - Set default USB configuration to "File Transfer (MTP)".
+
+* GOOGLE PIXEL / MOTOROLA / NOTHING:
+  - Pure stock Android. Works immediately out of the box with just
+    "USB debugging" enabled.
+
+================================================================================
+4. MAC INSTALLATION & FIRST LAUNCH
+================================================================================
+
+Open Terminal on your Mac and navigate into this folder:
+
+  cd DroidMirror
+
+Step 1: Run the Dependency Setup Script
+  ./setup.sh
+  (This verifies that adb and scrcpy-server.jar are present and executable).
+
+Step 2: Launch Directly from Source
+  swift run DroidMirror
+
+Step 3: Build Standalone macOS App Bundle (Optional)
+  ./bundle.sh
+  (Builds and codesigns a native DroidMirror.app in the build/ folder).
+  You can launch it anytime via:
+    open build/DroidMirror.app
+
+================================================================================
+5. USING THE 3 CONNECTION SWITCHES
+================================================================================
+
+DroidMirror uses a deterministic button-driven connection model. It NEVER
+flaps or switches networks in the background without your explicit click.
+
+--- SWITCH 1: WIRED USB CABLE (Fastest, 16 Mbps, Zero Latency) ---
+  1. Connect your phone via USB-C cable.
+  2. Click the "1. Wired USB" button.
+  3. Click "Connect via USB".
+  4. TIP: Before going wireless, click "Prep for Wireless (Enable Port 5555)".
+     This allows you to unplug the cable and use Switch 2 or 3!
+
+--- SWITCH 2: STANDARD HOME WI-FI (Convenient, 6 Mbps, 60 FPS) ---
+  1. Ensure your Mac and phone are on the same Wi-Fi network.
+  2. Click the "2. Home Wi-Fi" button.
+  3. If your phone was plugged into USB, click "Detect IP" to autofill your
+     phone's IP address (or type it manually, e.g. 192.168.1.105).
+  4. Click "Connect & Switch".
+  5. Android 11+ Pairing Code: If you don't have a USB cable, tap
+     "Pair (Android 11+)", enter the pairing port and 6-digit code shown in
+     phone's Wireless Debugging settings, and click Pair.
+
+--- SWITCH 3: OFFLINE PHONE HOTSPOT (Field Work, No Router Needed) ---
+  1. Turn ON "Personal Hotspot" on your phone.
+  2. Connect your Mac's Wi-Fi to your phone's hotspot.
+  3. In DroidMirror, click "3. Phone Hotspot".
+  4. Click "Detect Gateway" (autofills gateway IP, typically 192.168.43.1).
+  5. Click "Connect & Switch".
+
+================================================================================
+6. COMPACT FLOATING PHONE WINDOW (PICTURE-IN-PICTURE)
+================================================================================
+
+While streaming, you can shrink DroidMirror into a compact, phone-proportioned
+floating window that stays on top of your workspace:
+
+- Click the purple "Floating Window" button in the top bar, OR
+- Press:  Shift + Command + F  (⇧⌘F)
+
+The floating window provides:
+• Physical smartphone screen proportions (~680pt height).
+• Floats on top while you work in other apps.
+• Full interactive mouse clicking, dragging, and typing.
+• Compact header with live FPS counter, Back, Home, Power, and Expand buttons.
+
+================================================================================
+7. DRAG-AND-DROP INSTALLATION & FILE TRANSFER
+================================================================================
+
+While your phone is mirrored:
+- Drag an `.apk` file into the window -> Automatically installs on the phone.
+- Drag any other file (photos, PDFs, videos) -> Pushes to `/sdcard/Download/`.
+
+================================================================================
+8. KEYBOARD SHORTCUTS & GESTURES
+================================================================================
+
+NAVIGATION & MOUSE:
+  • Left-Click           -> Android Tap
+  • Click & Drag         -> Android Swipe / Scroll
+  • Right-Click          -> Android Back Button
+  • Middle-Click         -> Android Home Button
+  • Scroll-Wheel         -> Smooth vertical & horizontal scrolling
+
+KEYBOARD SHORTCUTS:
+  • ⇧⌘F (Shift+Cmd+F)    -> Toggle Compact Floating Phone Window
+  • ⌘?  (Cmd+Shift+/)    -> Open Help & Universal Smartphone Guide
+  • ⌘[                   -> Android Back Button
+  • ⌃⌘H (Ctrl+Cmd+H)     -> Android Home Button
+  • ⌃⌘S (Ctrl+Cmd+S)     -> Android App Switcher (Recents)
+  • ⌃⌘P (Ctrl+Cmd+P)     -> Android Power Button (Turn screen on/off)
+  • ⌃⌘O (Ctrl+Cmd+O)     -> Screen-Off Mirroring (Physical screen turns off,
+                            mirroring continues to save battery)
+  • ⌘C                   -> Copy text from phone to Mac pasteboard
+  • ⌘V                   -> Paste text from Mac into phone
+
+================================================================================
+9. AUTOMATED TEST & SIMULATION COMMANDS
+================================================================================
+
+To verify your environment and run the test suites:
+
+- Comprehensive 54-Assertion Unit & Live Device Tests:
+    swift run TestRunner
+
+- 1,000 Android Smartphone Simulation Suite:
+    swift run PhoneSimulator1000
+    (Tests 1,000 simulated phones across Samsung, Xiaomi, OnePlus, Vivo,
+     Pixel, Transsion, stack buffer safety, and codec fallback).
+
+================================================================================
+10. COMMON TROUBLESHOOTING & FAQS
+================================================================================
+
+Q: Phone says "Stream disconnected: socket disconnected" immediately on connect.
+A: This usually means the phone's hardware video encoder rejected the bitrate
+   or dimensions. DroidMirror Mac automatically detects this and steps down to
+   Tier 2 (Safe 720p/30fps) or Tier 3 (Universal AOSP Software Encoder).
+   Wait 1 second for the auto-recovery to reconnect.
+
+Q: Screen is black when phone is locked (Samsung Galaxy).
+A: Samsung Knox protects the PIN keypad with a black screen (FLAG_SECURE).
+   Simply type your numeric PIN on your Mac keyboard and press Enter to unlock!
+
+Q: Clicks and keyboard typing do nothing on Xiaomi / POCO / Redmi.
+A: Xiaomi requires enabling "USB debugging (Security settings)" in Developer
+   Options. You must have a SIM card inserted in the phone to toggle this once.
+
+Q: "Port 5555 unreachable on 192.168.x.x".
+A: Port 5555 is not enabled yet on the phone. Plug the phone in via USB cable
+   once, select Switch 1, and click "Prep for Wireless (Enable Port 5555)".
+   After that, you can unplug and use Wi-Fi or Hotspot!
+
+Q: adb command gives "more than one device/emulator".
+A: You have multiple phones connected. In DroidMirror Mac, use the top bar
+   device selector dropdown to pick the exact phone you want to mirror.
+
+================================================================================
+EOF
