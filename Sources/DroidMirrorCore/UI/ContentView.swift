@@ -458,6 +458,17 @@ public struct ContentView: View {
     }
 }
 
+public final class WindowObserverView: NSView {
+    public var onWindowAvailable: ((NSWindow) -> Void)?
+
+    public override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if let window = window {
+            onWindowAvailable?(window)
+        }
+    }
+}
+
 public struct WindowAccessor: NSViewRepresentable {
     public let callback: (NSWindow) -> Void
 
@@ -465,21 +476,16 @@ public struct WindowAccessor: NSViewRepresentable {
         self.callback = callback
     }
 
-    public func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async {
-            if let window = view.window {
-                callback(window)
-            }
-        }
+    public func makeNSView(context: Context) -> WindowObserverView {
+        let view = WindowObserverView()
+        view.onWindowAvailable = callback
         return view
     }
 
-    public func updateNSView(_ nsView: NSView, context: Context) {
-        DispatchQueue.main.async {
-            if let window = nsView.window {
-                callback(window)
-            }
+    public func updateNSView(_ nsView: WindowObserverView, context: Context) {
+        nsView.onWindowAvailable = callback
+        if let window = nsView.window {
+            callback(window)
         }
     }
 }

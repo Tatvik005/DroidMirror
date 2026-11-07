@@ -534,7 +534,7 @@ public final class TransportManager: ObservableObject {
     public func toggleFloatingWindow() {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            guard let window = self.hostingWindow ?? NSApp.windows.first(where: { $0.isVisible && !($0 is NSPanel) }) else {
+            guard let window = self.hostingWindow ?? NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first(where: { $0.isVisible && !($0 is NSPanel) }) else {
                 return
             }
             self.hostingWindow = window
@@ -587,7 +587,7 @@ public final class TransportManager: ObservableObject {
         guard isFloatingWindow else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            guard let window = self.hostingWindow ?? NSApp.windows.first(where: { $0.isVisible && !($0 is NSPanel) }) else {
+            guard let window = self.hostingWindow ?? NSApp.keyWindow ?? NSApp.mainWindow ?? NSApp.windows.first(where: { $0.isVisible && !($0 is NSPanel) }) else {
                 return
             }
             self.hostingWindow = window

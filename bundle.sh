@@ -74,4 +74,14 @@ EOF
 codesign --force --deep --sign - "${APP_DIR}"
 
 echo "[+] Application bundle created successfully at: ${APP_DIR}"
-echo "You can launch it via: open '${APP_DIR}'"
+
+# 6. Install to /Applications if writable
+if [ -d "/Applications" ] && [ -w "/Applications" ]; then
+    echo "[-] Updating /Applications/DroidMirror.app..."
+    pkill -x DroidMirror 2>/dev/null || true
+    rm -rf "/Applications/DroidMirror.app"
+    cp -R "${APP_DIR}" "/Applications/DroidMirror.app"
+    echo "[+] Successfully installed updated DroidMirror.app to /Applications/DroidMirror.app"
+fi
+
+echo "You can launch it via: open '/Applications/DroidMirror.app' or open '${APP_DIR}'"
