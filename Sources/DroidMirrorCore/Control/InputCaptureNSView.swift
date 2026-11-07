@@ -140,9 +140,15 @@ public final class InputCaptureNSView: NSView {
         let location = convert(event.locationInWindow, from: nil)
         let pt = mapToAndroidPoint(location) ?? (x: Int32(videoDimensions.width / 2), y: Int32(videoDimensions.height / 2))
 
-        // Invert deltaY for natural Android gesture
-        let hScroll = Float(event.scrollingDeltaX) * 0.1
-        let vScroll = Float(-event.scrollingDeltaY) * 0.1
+        // Differentiate smooth macOS trackpad deltas from notched mouse wheel ticks
+        let factor: Float = event.hasPreciseScrollingDeltas ? 0.04 : 0.25
+        let hScroll = Float(event.scrollingDeltaX) * factor
+        let vScroll = Float(-event.scrollingDeltaY) * factor
+
+        // Filter out sub-pixel trackpad jitter
+        if abs(hScroll) < 0.005 && abs(vScroll) < 0.005 {
+            return
+        }
 
         ControlInjector.shared.sendScrollEvent(
             x: pt.x,
@@ -154,42 +160,253 @@ public final class InputCaptureNSView: NSView {
         )
     }
 
+    // MARK: - Trackpad Gestures (Multi-touch Pinch-to-Zoom & Swipe Navigation)
+
+    private var isPinching: Bool = false
+    private var pinchCenter: (x: Int32, y: Int32) = (0, 0)
+    private var pinchDistance: CGFloat = 120.0
+
+    public override func magnify(with event: NSEvent) {
+        guard videoDimensions.width > 0 && videoDimensions.height > 0 else { return }
+
+        let location = convert(event.locationInWindow, from: nil)
+        let centerPt = mapToAndroidPoint(location) ?? (x: Int32(videoDimensions.width / 2), y: Int32(videoDimensions.height / 2))
+
+        let minDim = CGFloat(min(videoDimensions.width, videoDimensions.height))
+        let maxDim = CGFloat(max(videoDimensions.width, videoDimensions.height))
+
+        if event.phase.contains(.began) || (!isPinching && event.phase == []) {
+            isPinching = true
+            pinchCenter = centerPt
+            pinchDistance = max(80.0, minDim * 0.2)
+
+            let halfDist = Int32(pinchDistance / 2.0)
+            let p0X = max(0, min(Int32(videoDimensions.width), centerPt.x - halfDist))
+            let p1X = max(0, min(Int32(videoDimensions.width), centerPt.x + halfDist))
+
+            // Pointer 0 DOWN
+            ControlInjector.shared.sendTouchEvent(
+                action: 0,
+                pointerId: 0,
+                x: p0X,
+                y: centerPt.y,
+                screenWidth: UInt16(videoDimensions.width),
+                screenHeight: UInt16(videoDimensions.height),
+                pressure: 1.0,
+                actionButton: 1,
+                buttons: 1
+            )
+
+            // Pointer 1 DOWN (scrcpy controller automatically converts to ACTION_POINTER_DOWN)
+            ControlInjector.shared.sendTouchEvent(
+                action: 0,
+                pointerId: 1,
+                x: p1X,
+                y: centerPt.y,
+                screenWidth: UInt16(videoDimensions.width),
+                screenHeight: UInt16(videoDimensions.height),
+                pressure: 1.0,
+                actionButton: 1,
+                buttons: 1
+            )
+        } else if event.phase.contains(.changed) || isPinching {
+            let scaleFactor = 1.0 + event.magnification
+            pinchDistance = max(40.0, min(maxDim * 0.85, pinchDistance * scaleFactor))
+
+            let halfDist = Int32(pinchDistance / 2.0)
+            let p0X = max(0, min(Int32(videoDimensions.width), pinchCenter.x - halfDist))
+            let p1X = max(0, min(Int32(videoDimensions.width), pinchCenter.x + halfDist))
+
+            // Pointer 0 MOVE
+            ControlInjector.shared.sendTouchEvent(
+                action: 2,
+                pointerId: 0,
+                x: p0X,
+                y: pinchCenter.y,
+                screenWidth: UInt16(videoDimensions.width),
+                screenHeight: UInt16(videoDimensions.height),
+                pressure: 1.0,
+                actionButton: 1,
+                buttons: 1
+            )
+
+            // Pointer 1 MOVE
+            ControlInjector.shared.sendTouchEvent(
+                action: 2,
+                pointerId: 1,
+                x: p1X,
+                y: pinchCenter.y,
+                screenWidth: UInt16(videoDimensions.width),
+                screenHeight: UInt16(videoDimensions.height),
+                pressure: 1.0,
+                actionButton: 1,
+                buttons: 1
+            )
+        }
+
+        if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
+            guard isPinching else { return }
+            let halfDist = Int32(pinchDistance / 2.0)
+            let p0X = max(0, min(Int32(videoDimensions.width), pinchCenter.x - halfDist))
+            let p1X = max(0, min(Int32(videoDimensions.width), pinchCenter.x + halfDist))
+
+            // Pointer 1 UP
+            ControlInjector.shared.sendTouchEvent(
+                action: 1,
+                pointerId: 1,
+                x: p1X,
+                y: pinchCenter.y,
+                screenWidth: UInt16(videoDimensions.width),
+                screenHeight: UInt16(videoDimensions.height),
+                pressure: 0.0,
+                actionButton: 1,
+                buttons: 0
+            )
+
+            // Pointer 0 UP
+            ControlInjector.shared.sendTouchEvent(
+                action: 1,
+                pointerId: 0,
+                x: p0X,
+                y: pinchCenter.y,
+                screenWidth: UInt16(videoDimensions.width),
+                screenHeight: UInt16(videoDimensions.height),
+                pressure: 0.0,
+                actionButton: 1,
+                buttons: 0
+            )
+
+            isPinching = false
+        }
+    }
+
+    public override func swipe(with event: NSEvent) {
+        if event.deltaX > 0.4 {
+            // Two-finger swipe right -> Android Back
+            ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.back.rawValue)
+        } else if event.deltaX < -0.4 {
+            // Two-finger swipe left -> Android Back
+            ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.back.rawValue)
+        } else if event.deltaY < -0.4 {
+            // Two-finger swipe down -> Pull notification drawer
+            ControlInjector.shared.expandNotificationPanel()
+        } else if event.deltaY > 0.4 {
+            // Two-finger swipe up -> Home
+            ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.home.rawValue)
+        }
+    }
+
     // MARK: - Keyboard & Clipboard
 
     public override func keyDown(with event: NSEvent) {
-        // Check for Command key shortcuts
+        // 1. Check for Command shortcuts (macOS muscle memory)
         if event.modifierFlags.contains(.command) {
             let key = event.charactersIgnoringModifiers?.lowercased()
             if key == "c" {
-                // Command+C: Trigger copy on Android
+                // Command+C: Copy
                 ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.copy.rawValue)
                 return
             } else if key == "v" {
-                // Command+V: Paste Mac clipboard into Android
+                // Command+V: Paste Mac clipboard directly into Android
                 if let pbText = NSPasteboard.general.string(forType: .string) {
                     ControlInjector.shared.setClipboard(text: pbText, paste: true)
                 }
                 return
             } else if key == "a" {
-                // Command+A: Select all
+                // Command+A: Select All (Ctrl+A in Android)
                 ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.a.rawValue, metaState: 0x1000)
                 return
             } else if key == "x" {
                 // Command+X: Cut
                 ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.cut.rawValue)
                 return
+            } else if key == "z" {
+                // Command+Z: Undo / Redo
+                if event.modifierFlags.contains(.shift) {
+                    ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.z.rawValue, metaState: 0x1001)
+                } else {
+                    ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.z.rawValue, metaState: 0x1000)
+                }
+                return
+            } else if key == "w" {
+                // Command+W: Back
+                ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.back.rawValue)
+                return
+            } else if key == "h" {
+                // Command+H: Home
+                ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.home.rawValue)
+                return
+            }
+
+            // Command + Navigation
+            if event.keyCode == 51 {
+                // Command+Backspace: Delete line backwards
+                ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.moveHome.rawValue, metaState: 0x0001)
+                ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.del.rawValue)
+                return
+            } else if event.keyCode == 123 {
+                // Command+Left: Start of line
+                ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.moveHome.rawValue)
+                return
+            } else if event.keyCode == 124 {
+                // Command+Right: End of line
+                ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.moveEnd.rawValue)
+                return
+            } else if event.keyCode == 126 {
+                // Command+Up: Top of page
+                ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.moveHome.rawValue, metaState: 0x1000)
+                return
+            } else if event.keyCode == 125 {
+                // Command+Down: Bottom of page
+                ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.moveEnd.rawValue, metaState: 0x1000)
+                return
             }
         }
 
+        // 2. Check for Option shortcuts (macOS word navigation)
+        if event.modifierFlags.contains(.option) {
+            if event.keyCode == 51 {
+                // Option+Backspace: Delete previous word (Ctrl+Backspace in Android)
+                ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.del.rawValue, metaState: 0x1000)
+                return
+            } else if event.keyCode == 123 {
+                // Option+Left: Previous word
+                ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.dpadLeft.rawValue, metaState: 0x1000)
+                return
+            } else if event.keyCode == 124 {
+                // Option+Right: Next word
+                ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.dpadRight.rawValue, metaState: 0x1000)
+                return
+            }
+        }
+
+        // 3. Special navigation & control keys (Enter, Tab, Backspace, Esc, Arrows, PageUp/Down)
+        if let specialKey = KeyMapper.mapSpecialKeyToAndroid(event.keyCode) {
+            let repeatCount: Int32 = event.isARepeat ? 1 : 0
+            ControlInjector.shared.sendKeycode(action: 0, keycode: specialKey.rawValue, repeatCount: repeatCount)
+            return
+        }
+
+        // 4. Full-fidelity printable text injection (handles uppercase, numbers, symbols, international chars, emojis)
+        if let chars = event.characters, !chars.isEmpty {
+            // Discard unprintable ASCII control characters (< 0x20)
+            let isPrintable = chars.unicodeScalars.allSatisfy { $0.value >= 0x20 || $0.value == 0x0A || $0.value == 0x09 }
+            if isPrintable {
+                ControlInjector.shared.sendText(chars)
+                return
+            }
+        }
+
+        // Fallback for any unhandled raw keys
         if let androidKey = KeyMapper.mapMacOSKeyCodeToAndroid(event.keyCode) {
             ControlInjector.shared.sendKeycode(action: 0, keycode: androidKey.rawValue)
-        } else if let chars = event.characters, !chars.isEmpty {
-            ControlInjector.shared.sendText(chars)
         }
     }
 
     public override func keyUp(with event: NSEvent) {
-        if let androidKey = KeyMapper.mapMacOSKeyCodeToAndroid(event.keyCode) {
+        if let specialKey = KeyMapper.mapSpecialKeyToAndroid(event.keyCode) {
+            ControlInjector.shared.sendKeycode(action: 1, keycode: specialKey.rawValue)
+        } else if let androidKey = KeyMapper.mapMacOSKeyCodeToAndroid(event.keyCode) {
             ControlInjector.shared.sendKeycode(action: 1, keycode: androidKey.rawValue)
         }
     }

@@ -69,7 +69,9 @@ public struct ContentView: View {
         }
         .frame(
             minWidth: transport.isFloatingWindow ? 260 : 840,
-            minHeight: transport.isFloatingWindow ? 480 : 680
+            maxWidth: transport.isFloatingWindow ? 380 : .infinity,
+            minHeight: transport.isFloatingWindow ? 480 : 680,
+            maxHeight: transport.isFloatingWindow ? 740 : .infinity
         )
         .sheet(isPresented: $transport.showPairingModal) {
             WirelessPairingModal(transport: transport)
@@ -114,13 +116,16 @@ public struct ContentView: View {
 
                 Spacer()
 
-                // Quick Navigation Controls: Back, Home, Power
+                // Quick Navigation Controls: Back, Home, Rotate, Power
                 HStack(spacing: 4) {
                     floatingCompactButton(icon: "chevron.backward", help: "Back (⌘[ or Right-Click)") {
                         transport.back()
                     }
                     floatingCompactButton(icon: "circle.circle", help: "Home (⌃⌘H or Middle-Click)") {
                         transport.home()
+                    }
+                    floatingCompactButton(icon: "arrow.triangle.2.circlepath", help: "Rotate Phone") {
+                        transport.toggleDeviceRotation()
                     }
                     floatingCompactButton(icon: "power", help: "Power (⌃⌘P)") {
                         transport.togglePower()

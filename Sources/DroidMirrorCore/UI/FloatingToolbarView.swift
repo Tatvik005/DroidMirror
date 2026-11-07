@@ -72,6 +72,13 @@ public struct FloatingToolbarView: View {
                 action: { transport.toggleScreenOffMirroring() }
             )
 
+            // Rotate Device
+            ToolbarButton(
+                icon: "arrow.triangle.2.circlepath",
+                tooltip: "Rotate Phone Screen",
+                action: { transport.toggleDeviceRotation() }
+            )
+
             if transport.isConnected {
                 Divider()
                     .frame(width: 20)

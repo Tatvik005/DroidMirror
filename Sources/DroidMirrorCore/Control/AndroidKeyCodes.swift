@@ -68,6 +68,26 @@ public enum AndroidKeycode: Int32 {
 }
 
 public struct KeyMapper {
+    /// Returns Android keycode for special non-printable navigation, control, and editing keys.
+    public static func mapSpecialKeyToAndroid(_ keyCode: UInt16) -> AndroidKeycode? {
+        switch keyCode {
+        case 36: return .enter
+        case 48: return .tab
+        case 51: return .del           // Backspace
+        case 53: return .back          // Escape -> Android Back
+        case 115: return .moveHome     // Home
+        case 116: return .pageUp
+        case 117: return .forwardDel   // Forward Delete
+        case 119: return .moveEnd      // End
+        case 121: return .pageDown
+        case 123: return .dpadLeft
+        case 124: return .dpadRight
+        case 125: return .dpadDown
+        case 126: return .dpadUp
+        default: return nil
+        }
+    }
+
     public static func mapMacOSKeyCodeToAndroid(_ keyCode: UInt16) -> AndroidKeycode? {
         switch keyCode {
         case 0: return .a

@@ -117,6 +117,7 @@ public final class TransportManager: ObservableObject {
         decoder.onDimensionChange = { [weak self] width, height in
             DispatchQueue.main.async {
                 self?.resolution = (width, height)
+                self?.maintainFloatingWindowPortrait()
             }
         }
 
@@ -131,6 +132,7 @@ public final class TransportManager: ObservableObject {
         streamClient.onResolutionChanged = { [weak self] width, height in
             DispatchQueue.main.async {
                 self?.resolution = (width, height)
+                self?.maintainFloatingWindowPortrait()
             }
         }
 
@@ -500,6 +502,22 @@ public final class TransportManager: ObservableObject {
         statusMessage = isScreenOff ? "Physical screen turned OFF (mirroring active)" : "Physical screen turned ON"
     }
 
+    public func toggleDeviceRotation() {
+        ControlInjector.shared.rotateDevice()
+        if let serial = activeTargetSerial {
+            Task {
+                do {
+                    let res = try await adb.runCommand(["-s", serial, "shell", "settings", "get", "system", "user_rotation"])
+                    let next = (res.stdout.trimmingCharacters(in: .whitespacesAndNewlines) == "0") ? "1" : "0"
+                    _ = try await adb.runCommand(["-s", serial, "shell", "settings", "put", "system", "accelerometer_rotation", "0"])
+                    _ = try await adb.runCommand(["-s", serial, "shell", "settings", "put", "system", "user_rotation", next])
+                } catch {
+                    // In-flight scrcpy TYPE_ROTATE_DEVICE already dispatched
+                }
+            }
+        }
+    }
+
     // MARK: - Floating Compact Window Mode
 
     public func toggleFloatingWindow() {
@@ -528,15 +546,18 @@ public final class TransportManager: ObservableObject {
                 window.level = .floating
 
                 // Phone-sized compact window:
-                // Sized to standard physical smartphone proportions (~680pt height)
+                // Sized to standard physical smartphone portrait proportions (~680pt height, ~314-340pt width)
+                // Even when the phone rotates to landscape, window stays in portrait phone bounds
                 let targetHeight: CGFloat = 680.0
-                let aspect: CGFloat
-                if self.resolution.width > 0 && self.resolution.height > 0 {
-                    aspect = CGFloat(self.resolution.width) / CGFloat(self.resolution.height)
+                let w = CGFloat(self.resolution.width)
+                let h = CGFloat(self.resolution.height)
+                let portraitAspect: CGFloat
+                if w > 0 && h > 0 {
+                    portraitAspect = min(w, h) / max(w, h)
                 } else {
-                    aspect = 9.0 / 19.5
+                    portraitAspect = 9.0 / 19.5
                 }
-                let targetWidth: CGFloat = max(280.0, round(targetHeight * aspect))
+                let targetWidth: CGFloat = max(280.0, min(360.0, round(targetHeight * portraitAspect)))
 
                 let screenFrame = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
                 let newX = max(screenFrame.minX + 20, min(window.frame.origin.x, screenFrame.maxX - targetWidth - 24))
@@ -544,6 +565,35 @@ public final class TransportManager: ObservableObject {
 
                 let targetFrame = NSRect(x: newX, y: newY, width: targetWidth, height: targetHeight)
                 window.setFrame(targetFrame, display: true, animate: true)
+            }
+        }
+    }
+
+    /// Automatically guarantees that the floating window remains strictly locked to portrait smartphone dimensions
+    /// even if the phone rotates into landscape.
+    public func maintainFloatingWindowPortrait() {
+        guard isFloatingWindow else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            guard let window = NSApp.windows.first(where: { $0.isVisible && !($0 is NSPanel) }) else {
+                return
+            }
+            let w = CGFloat(self.resolution.width)
+            let h = CGFloat(self.resolution.height)
+            let portraitAspect: CGFloat
+            if w > 0 && h > 0 {
+                portraitAspect = min(w, h) / max(w, h)
+            } else {
+                portraitAspect = 9.0 / 19.5
+            }
+            let targetHeight: CGFloat = 680.0
+            let targetWidth: CGFloat = max(280.0, min(360.0, round(targetHeight * portraitAspect)))
+
+            if abs(window.frame.width - targetWidth) > 2.0 || abs(window.frame.height - targetHeight) > 2.0 {
+                var currentFrame = window.frame
+                currentFrame.size.width = targetWidth
+                currentFrame.size.height = targetHeight
+                window.setFrame(currentFrame, display: true, animate: true)
             }
         }
     }
