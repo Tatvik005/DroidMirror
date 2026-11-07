@@ -86,8 +86,19 @@ public final class InputCaptureNSView: NSView {
 
     public override func mouseDown(with event: NSEvent) {
         window?.makeFirstResponder(self)
+
+        // 1. If Command key is held, drag the floating window natively from anywhere
+        if event.modifierFlags.contains(.command) {
+            window?.performDrag(with: event)
+            return
+        }
+
         let location = convert(event.locationInWindow, from: nil)
-        guard let pt = mapToAndroidPoint(location, clamped: false) else { return }
+        guard let pt = mapToAndroidPoint(location, clamped: false) else {
+            // Click on black bezel, margin, or outer frame initiates window drag
+            window?.performDrag(with: event)
+            return
+        }
 
         initialMouseDownPoint = location
         lastValidAndroidPoint = pt

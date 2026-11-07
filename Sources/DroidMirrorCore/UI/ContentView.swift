@@ -48,16 +48,20 @@ public struct ContentView: View {
                                     .padding(.trailing, 22)
                             )
                             .padding(.top, 4)
+                            .allowsHitTesting(false)
 
                         Spacer()
 
-                        // Bottom Home Indicator Bar
-                        Capsule()
-                            .fill(Color.white.opacity(0.45))
-                            .frame(width: 48, height: 2.5)
-                            .padding(.bottom, 4)
+                        // Bottom Home Indicator Bar / Window Drag Handle
+                        WindowDragHandle()
+                            .frame(width: 80, height: 16)
+                            .overlay(
+                                Capsule()
+                                    .fill(Color.white.opacity(0.45))
+                                    .frame(width: 48, height: 2.5)
+                            )
+                            .padding(.bottom, 2)
                     }
-                    .allowsHitTesting(false)
                 }
 
                 // Controls Overlay
@@ -169,7 +173,14 @@ public struct ContentView: View {
                 .background(Color.black.opacity(0.7))
                 .cornerRadius(8)
 
-                Spacer()
+                // Top Drag Handle (Click & drag to reposition floating window)
+                WindowDragHandle()
+                    .frame(maxWidth: .infinity, maxHeight: 18)
+                    .overlay(
+                        Capsule()
+                            .fill(Color.white.opacity(0.35))
+                            .frame(width: 22, height: 3)
+                    )
 
                 // Quick Navigation Controls: Back, Home, Rotate, Power
                 HStack(spacing: 3) {
@@ -390,7 +401,14 @@ public struct ContentView: View {
                     Image(systemName: mode.iconName)
                         .font(.system(size: 18))
                         .foregroundColor(transport.selectedMode == mode ? .accentColor : .secondary)
-                    Spacer()
+                    // Top Drag Handle (Click & drag to reposition floating window)
+                WindowDragHandle()
+                    .frame(maxWidth: .infinity, maxHeight: 18)
+                    .overlay(
+                        Capsule()
+                            .fill(Color.white.opacity(0.35))
+                            .frame(width: 22, height: 3)
+                    )
                     Text(tag)
                         .font(.system(size: 9, weight: .bold))
                         .padding(.horizontal, 6)
@@ -488,4 +506,25 @@ public struct WindowAccessor: NSViewRepresentable {
             callback(window)
         }
     }
+}
+
+public final class WindowDragNSView: NSView {
+    public override func mouseDown(with event: NSEvent) {
+        window?.performDrag(with: event)
+    }
+
+    public override func resetCursorRects() {
+        super.resetCursorRects()
+        addCursorRect(bounds, cursor: .openHand)
+    }
+}
+
+public struct WindowDragHandle: NSViewRepresentable {
+    public init() {}
+
+    public func makeNSView(context: Context) -> WindowDragNSView {
+        return WindowDragNSView()
+    }
+
+    public func updateNSView(_ nsView: WindowDragNSView, context: Context) {}
 }
