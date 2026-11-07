@@ -34,35 +34,6 @@ public struct ContentView: View {
                 .aspectRatio(aspectRatio, contentMode: .fit)
                 .opacity(transport.isConnected ? 1.0 : 0.0)
 
-                // Authentic Smartphone Hardware Bezel Accents (Camera Notch & Home Bar in Portrait)
-                if transport.isFloatingWindow && !transport.isLandscape {
-                    VStack {
-                        // Top Camera Punch-Hole & Speaker Earpiece
-                        Capsule()
-                            .fill(Color.black.opacity(0.85))
-                            .frame(width: 38, height: 6)
-                            .overlay(
-                                Circle()
-                                    .fill(Color(white: 0.28))
-                                    .frame(width: 3, height: 3)
-                                    .padding(.trailing, 22)
-                            )
-                            .padding(.top, 4)
-                            .allowsHitTesting(false)
-
-                        Spacer()
-
-                        // Bottom Home Indicator Bar / Window Drag Handle
-                        WindowDragHandle()
-                            .frame(width: 80, height: 16)
-                            .overlay(
-                                Capsule()
-                                    .fill(Color.white.opacity(0.45))
-                                    .frame(width: 48, height: 2.5)
-                            )
-                            .padding(.bottom, 2)
-                    }
-                }
 
                 // Controls Overlay
                 if transport.isConnected {
@@ -173,14 +144,7 @@ public struct ContentView: View {
                 .background(Color.black.opacity(0.7))
                 .cornerRadius(8)
 
-                // Top Drag Handle (Click & drag to reposition floating window)
-                WindowDragHandle()
-                    .frame(maxWidth: .infinity, maxHeight: 18)
-                    .overlay(
-                        Capsule()
-                            .fill(Color.white.opacity(0.35))
-                            .frame(width: 22, height: 3)
-                    )
+                Spacer()
 
                 // Quick Navigation Controls: Back, Home, Rotate, Power
                 HStack(spacing: 3) {
@@ -401,14 +365,7 @@ public struct ContentView: View {
                     Image(systemName: mode.iconName)
                         .font(.system(size: 18))
                         .foregroundColor(transport.selectedMode == mode ? .accentColor : .secondary)
-                    // Top Drag Handle (Click & drag to reposition floating window)
-                WindowDragHandle()
-                    .frame(maxWidth: .infinity, maxHeight: 18)
-                    .overlay(
-                        Capsule()
-                            .fill(Color.white.opacity(0.35))
-                            .frame(width: 22, height: 3)
-                    )
+                    Spacer()
                     Text(tag)
                         .font(.system(size: 9, weight: .bold))
                         .padding(.horizontal, 6)
@@ -506,25 +463,4 @@ public struct WindowAccessor: NSViewRepresentable {
             callback(window)
         }
     }
-}
-
-public final class WindowDragNSView: NSView {
-    public override func mouseDown(with event: NSEvent) {
-        window?.performDrag(with: event)
-    }
-
-    public override func resetCursorRects() {
-        super.resetCursorRects()
-        addCursorRect(bounds, cursor: .openHand)
-    }
-}
-
-public struct WindowDragHandle: NSViewRepresentable {
-    public init() {}
-
-    public func makeNSView(context: Context) -> WindowDragNSView {
-        return WindowDragNSView()
-    }
-
-    public func updateNSView(_ nsView: WindowDragNSView, context: Context) {}
 }

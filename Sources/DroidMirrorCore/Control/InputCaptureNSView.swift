@@ -95,8 +95,7 @@ public final class InputCaptureNSView: NSView {
 
         let location = convert(event.locationInWindow, from: nil)
         guard let pt = mapToAndroidPoint(location, clamped: false) else {
-            // Click on black bezel, margin, or outer frame initiates window drag
-            window?.performDrag(with: event)
+            // Clicks outside video content are ignored; window move is exclusively ⌘+Drag
             return
         }
 

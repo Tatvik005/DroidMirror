@@ -622,7 +622,7 @@ public final class TransportManager: ObservableObject {
             window.isOpaque = false
             window.backgroundColor = .clear
             window.hasShadow = true
-            window.isMovableByWindowBackground = true
+            window.isMovableByWindowBackground = false
 
             let screenFrame = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
             let newX = max(screenFrame.minX + 16, min(window.frame.origin.x, screenFrame.maxX - targetWidth - 20))
