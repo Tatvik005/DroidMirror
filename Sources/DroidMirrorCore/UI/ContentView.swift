@@ -124,10 +124,10 @@ public struct ContentView: View {
             }
         }
         .frame(
-            minWidth: transport.isFloatingWindow ? 140 : 840,
-            maxWidth: transport.isFloatingWindow ? 420 : .infinity,
-            minHeight: transport.isFloatingWindow ? 140 : 680,
-            maxHeight: transport.isFloatingWindow ? 420 : .infinity
+            minWidth: transport.isFloatingWindow ? 200 : 840,
+            maxWidth: transport.isFloatingWindow ? 780 : .infinity,
+            minHeight: transport.isFloatingWindow ? 200 : 680,
+            maxHeight: transport.isFloatingWindow ? 780 : .infinity
         )
         .background(WindowAccessor { win in
             transport.attachWindow(win)

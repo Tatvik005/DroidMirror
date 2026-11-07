@@ -596,26 +596,27 @@ public final class TransportManager: ObservableObject {
             let h = CGFloat(self.resolution.height)
             let isLandscape = (w > 0 && h > 0) ? (w > h) : false
 
-            // Strict 6-inch physical screen maximum:
-            // Longest edge = 370pt (ensures diagonal on standard Mac displays is strictly <= 5.8 inches, never exceeding 6 inches)
-            // Shortest edge = 370pt * aspect ratio
-            let maxDimension: CGFloat = 370.0
+            // Physical Smartphone Dimensions (Matches a standard 6.0" physical phone 1:1 on Mac displays)
+            // Longest dimension = 670pt (~5.3 physical inches on 127 pt/inch Retina)
+            // Shortest dimension = 670pt * aspect (~305-315pt, ~2.4 physical inches)
+            // Screen diagonal = ~5.8 physical inches
+            let phoneLongSide: CGFloat = 670.0
             let aspect: CGFloat
             if w > 0 && h > 0 {
                 aspect = min(w, h) / max(w, h)
             } else {
                 aspect = 9.0 / 19.5
             }
-            let shortDimension: CGFloat = max(150.0, min(190.0, round(maxDimension * aspect)))
+            let phoneShortSide: CGFloat = max(280.0, min(340.0, round(phoneLongSide * aspect)))
 
-            let targetWidth: CGFloat = isLandscape ? maxDimension : shortDimension
-            let targetHeight: CGFloat = isLandscape ? shortDimension : maxDimension
+            let targetWidth: CGFloat = isLandscape ? phoneLongSide : phoneShortSide
+            let targetHeight: CGFloat = isLandscape ? phoneShortSide : phoneLongSide
 
-            // CRITICAL: Unlock AppKit minSize and maxSize constraints so the window can shrink to real phone size
-            window.minSize = NSSize(width: 100, height: 100)
-            window.contentMinSize = NSSize(width: 100, height: 100)
-            window.maxSize = NSSize(width: 500, height: 500)
-            window.contentMaxSize = NSSize(width: 500, height: 500)
+            // Configure AppKit window limits for floating phone
+            window.minSize = NSSize(width: 200, height: 200)
+            window.contentMinSize = NSSize(width: 200, height: 200)
+            window.maxSize = NSSize(width: 800, height: 800)
+            window.contentMaxSize = NSSize(width: 800, height: 800)
 
             window.level = .floating
             window.isOpaque = false
