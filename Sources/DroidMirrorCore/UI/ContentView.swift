@@ -34,28 +34,28 @@ public struct ContentView: View {
                 .aspectRatio(aspectRatio, contentMode: .fit)
                 .opacity(transport.isConnected ? 1.0 : 0.0)
 
-                // Authentic Smartphone Hardware Bezel Accents (Camera Notch & Home Bar)
-                if transport.isFloatingWindow {
+                // Authentic Smartphone Hardware Bezel Accents (Camera Notch & Home Bar in Portrait)
+                if transport.isFloatingWindow && !transport.isLandscape {
                     VStack {
                         // Top Camera Punch-Hole & Speaker Earpiece
                         Capsule()
                             .fill(Color.black.opacity(0.85))
-                            .frame(width: 44, height: 7)
+                            .frame(width: 38, height: 6)
                             .overlay(
                                 Circle()
                                     .fill(Color(white: 0.28))
-                                    .frame(width: 3.5, height: 3.5)
-                                    .padding(.trailing, 24)
+                                    .frame(width: 3, height: 3)
+                                    .padding(.trailing, 22)
                             )
-                            .padding(.top, 5)
+                            .padding(.top, 4)
 
                         Spacer()
 
                         // Bottom Home Indicator Bar
                         Capsule()
                             .fill(Color.white.opacity(0.45))
-                            .frame(width: 60, height: 3)
-                            .padding(.bottom, 6)
+                            .frame(width: 48, height: 2.5)
+                            .padding(.bottom, 4)
                     }
                     .allowsHitTesting(false)
                 }
@@ -83,27 +83,32 @@ public struct ContentView: View {
                         .transition(.opacity)
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: transport.isFloatingWindow ? 34 : 0, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: transport.isFloatingWindow ? 24 : 0, style: .continuous))
             .overlay(
                 Group {
                     if transport.isFloatingWindow {
-                        RoundedRectangle(cornerRadius: 34, style: .continuous)
+                        RoundedRectangle(cornerRadius: 24, style: .continuous)
                             .strokeBorder(
                                 LinearGradient(
                                     colors: [
-                                        Color.white.opacity(0.4),
-                                        Color.white.opacity(0.12),
-                                        Color.black.opacity(0.75)
+                                        Color.white.opacity(0.35),
+                                        Color.white.opacity(0.08),
+                                        Color.black.opacity(0.7)
                                     ],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 ),
-                                lineWidth: 2.5
+                                lineWidth: 2.0
                             )
                     }
                 }
             )
-            .shadow(color: Color.black.opacity(transport.isFloatingWindow ? 0.45 : 0.0), radius: transport.isFloatingWindow ? 18 : 0, x: 0, y: 8)
+            .shadow(color: Color.black.opacity(transport.isFloatingWindow ? 0.45 : 0.0), radius: transport.isFloatingWindow ? 16 : 0, x: 0, y: 6)
+            .onHover { hovering in
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    transport.isHoveringFloatingWindow = hovering
+                }
+            }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .animation(.easeInOut(duration: 0.25), value: transport.isConnected)
 
@@ -115,11 +120,14 @@ public struct ContentView: View {
             }
         }
         .frame(
-            minWidth: transport.isFloatingWindow ? 240 : 840,
-            maxWidth: transport.isFloatingWindow ? 300 : .infinity,
-            minHeight: transport.isFloatingWindow ? 480 : 680,
-            maxHeight: transport.isFloatingWindow ? 580 : .infinity
+            minWidth: transport.isFloatingWindow ? 140 : 840,
+            maxWidth: transport.isFloatingWindow ? 420 : .infinity,
+            minHeight: transport.isFloatingWindow ? 140 : 680,
+            maxHeight: transport.isFloatingWindow ? 420 : .infinity
         )
+        .background(WindowAccessor { win in
+            transport.attachWindow(win)
+        })
         .sheet(isPresented: $transport.showPairingModal) {
             WirelessPairingModal(transport: transport)
         }
@@ -146,25 +154,25 @@ public struct ContentView: View {
 
     private var floatingWindowHeaderOverlay: some View {
         VStack {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 // Live FPS Pill
-                HStack(spacing: 5) {
+                HStack(spacing: 4) {
                     Circle()
                         .fill(Color.green)
-                        .frame(width: 6, height: 6)
-                    Text("\(transport.fps) FPS")
-                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                        .frame(width: 5, height: 5)
+                    Text("\(transport.fps)")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
                         .foregroundColor(.white)
                 }
-                .padding(.horizontal, 7)
-                .padding(.vertical, 4)
-                .background(Color.black.opacity(0.65))
-                .cornerRadius(10)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 3)
+                .background(Color.black.opacity(0.7))
+                .cornerRadius(8)
 
                 Spacer()
 
                 // Quick Navigation Controls: Back, Home, Rotate, Power
-                HStack(spacing: 4) {
+                HStack(spacing: 3) {
                     floatingCompactButton(icon: "chevron.backward", help: "Back (⌘[ or Right-Click)") {
                         transport.back()
                     }
@@ -178,26 +186,28 @@ public struct ContentView: View {
                         transport.togglePower()
                     }
                 }
-                .padding(3)
-                .background(Color.black.opacity(0.65))
-                .cornerRadius(12)
+                .padding(2)
+                .background(Color.black.opacity(0.7))
+                .cornerRadius(10)
 
                 // Expand back to Normal Window
                 Button(action: {
                     transport.toggleFloatingWindow()
                 }) {
                     Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 9, weight: .bold))
                         .foregroundColor(.white)
-                        .padding(6)
+                        .frame(width: 18, height: 18)
                         .background(Color.blue.opacity(0.85))
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
                 .help("Exit Floating Phone Window (⇧⌘F)")
             }
-            .padding(.horizontal, 8)
-            .padding(.top, 16)
+            .padding(.horizontal, 6)
+            .padding(.top, 6)
+            .opacity(transport.isHoveringFloatingWindow ? 1.0 : 0.25)
+            .animation(.easeInOut(duration: 0.15), value: transport.isHoveringFloatingWindow)
 
             Spacer()
         }
@@ -206,9 +216,9 @@ public struct ContentView: View {
     private func floatingCompactButton(icon: String, help: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: 9, weight: .semibold))
                 .foregroundColor(.white)
-                .frame(width: 22, height: 22)
+                .frame(width: 18, height: 18)
                 .background(Color.white.opacity(0.12))
                 .clipShape(Circle())
         }
@@ -445,5 +455,31 @@ public struct ContentView: View {
             return img
         }
         return nil
+    }
+}
+
+public struct WindowAccessor: NSViewRepresentable {
+    public let callback: (NSWindow) -> Void
+
+    public init(callback: @escaping (NSWindow) -> Void) {
+        self.callback = callback
+    }
+
+    public func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            if let window = view.window {
+                callback(window)
+            }
+        }
+        return view
+    }
+
+    public func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            if let window = nsView.window {
+                callback(window)
+            }
+        }
     }
 }

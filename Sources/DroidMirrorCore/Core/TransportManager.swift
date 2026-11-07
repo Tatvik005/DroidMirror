@@ -41,6 +41,17 @@ public final class TransportManager: ObservableObject {
     @Published public var isConnected: Bool = false
     @Published public var isScreenOff: Bool = false
     @Published public var isFloatingWindow: Bool = false
+    @Published public var isHoveringFloatingWindow: Bool = false
+
+    public weak var hostingWindow: NSWindow?
+
+    public func attachWindow(_ window: NSWindow) {
+        self.hostingWindow = window
+    }
+
+    public var isLandscape: Bool {
+        return resolution.width > 0 && resolution.height > 0 && resolution.width > resolution.height
+    }
 
     private var previousWindowFrame: NSRect?
 
@@ -117,7 +128,7 @@ public final class TransportManager: ObservableObject {
         decoder.onDimensionChange = { [weak self] width, height in
             DispatchQueue.main.async {
                 self?.resolution = (width, height)
-                self?.maintainFloatingWindowPortrait()
+                self?.applyFloatingWindowBounds(animate: true)
             }
         }
 
@@ -132,7 +143,7 @@ public final class TransportManager: ObservableObject {
         streamClient.onResolutionChanged = { [weak self] width, height in
             DispatchQueue.main.async {
                 self?.resolution = (width, height)
-                self?.maintainFloatingWindowPortrait()
+                self?.applyFloatingWindowBounds(animate: true)
             }
         }
 
@@ -518,18 +529,31 @@ public final class TransportManager: ObservableObject {
         }
     }
 
-    // MARK: - Floating Compact Window Mode
+    // MARK: - Floating Compact Phone Window Mode (Strictly <= 6 Inches)
 
     public func toggleFloatingWindow() {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            guard let window = NSApp.windows.first(where: { $0.isVisible && !($0 is NSPanel) }) else {
+            guard let window = self.hostingWindow ?? NSApp.windows.first(where: { $0.isVisible && !($0 is NSPanel) }) else {
                 return
             }
+            self.hostingWindow = window
 
             if self.isFloatingWindow {
                 // Exit floating mode
                 self.isFloatingWindow = false
+
+                // Restore macOS window traffic lights
+                window.standardWindowButton(.closeButton)?.isHidden = false
+                window.standardWindowButton(.miniaturizeButton)?.isHidden = false
+                window.standardWindowButton(.zoomButton)?.isHidden = false
+
+                // Restore normal desktop window limits
+                window.minSize = NSSize(width: 840, height: 680)
+                window.contentMinSize = NSSize(width: 840, height: 680)
+                window.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+                window.contentMaxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+
                 window.level = .normal
                 window.isOpaque = true
                 window.backgroundColor = .windowBackgroundColor
@@ -546,62 +570,65 @@ public final class TransportManager: ObservableObject {
                 // Enter floating mode
                 self.previousWindowFrame = window.frame
                 self.isFloatingWindow = true
-                window.level = .floating
-                window.isOpaque = false
-                window.backgroundColor = .clear
-                window.hasShadow = true
-                window.isMovableByWindowBackground = true
 
-                // Phone-sized compact window:
-                // Sized to true physical smartphone dimensions (~560pt height, ~250-280pt width)
-                // Guaranteed to never exceed the physical screen size of a handheld smartphone
-                let targetHeight: CGFloat = 560.0
-                let w = CGFloat(self.resolution.width)
-                let h = CGFloat(self.resolution.height)
-                let portraitAspect: CGFloat
-                if w > 0 && h > 0 {
-                    portraitAspect = min(w, h) / max(w, h)
-                } else {
-                    portraitAspect = 9.0 / 19.5
-                }
-                let targetWidth: CGFloat = max(250.0, min(290.0, round(targetHeight * portraitAspect)))
+                // Hide traffic lights for true smartphone look
+                window.standardWindowButton(.closeButton)?.isHidden = true
+                window.standardWindowButton(.miniaturizeButton)?.isHidden = true
+                window.standardWindowButton(.zoomButton)?.isHidden = true
 
-                let screenFrame = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-                let newX = max(screenFrame.minX + 20, min(window.frame.origin.x, screenFrame.maxX - targetWidth - 24))
-                let newY = max(screenFrame.minY + 20, (screenFrame.height - targetHeight) / 2.0)
-
-                let targetFrame = NSRect(x: newX, y: newY, width: targetWidth, height: targetHeight)
-                window.setFrame(targetFrame, display: true, animate: true)
+                self.applyFloatingWindowBounds(animate: true)
             }
         }
     }
 
-    /// Automatically guarantees that the floating window remains strictly locked to portrait smartphone dimensions
-    /// even if the phone rotates into landscape.
-    public func maintainFloatingWindowPortrait() {
+    /// Automatically guarantees that the floating window is strictly sized like a real phone (<= 6 inches)
+    /// in BOTH portrait and landscape orientations, adapting automatically to device rotation.
+    public func applyFloatingWindowBounds(animate: Bool = true) {
         guard isFloatingWindow else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
-            guard let window = NSApp.windows.first(where: { $0.isVisible && !($0 is NSPanel) }) else {
+            guard let window = self.hostingWindow ?? NSApp.windows.first(where: { $0.isVisible && !($0 is NSPanel) }) else {
                 return
             }
+            self.hostingWindow = window
+
             let w = CGFloat(self.resolution.width)
             let h = CGFloat(self.resolution.height)
-            let portraitAspect: CGFloat
-            if w > 0 && h > 0 {
-                portraitAspect = min(w, h) / max(w, h)
-            } else {
-                portraitAspect = 9.0 / 19.5
-            }
-            let targetHeight: CGFloat = 560.0
-            let targetWidth: CGFloat = max(250.0, min(290.0, round(targetHeight * portraitAspect)))
+            let isLandscape = (w > 0 && h > 0) ? (w > h) : false
 
-            if abs(window.frame.width - targetWidth) > 2.0 || abs(window.frame.height - targetHeight) > 2.0 {
-                var currentFrame = window.frame
-                currentFrame.size.width = targetWidth
-                currentFrame.size.height = targetHeight
-                window.setFrame(currentFrame, display: true, animate: true)
+            // Strict 6-inch physical screen maximum:
+            // Longest edge = 370pt (ensures diagonal on standard Mac displays is strictly <= 5.8 inches, never exceeding 6 inches)
+            // Shortest edge = 370pt * aspect ratio
+            let maxDimension: CGFloat = 370.0
+            let aspect: CGFloat
+            if w > 0 && h > 0 {
+                aspect = min(w, h) / max(w, h)
+            } else {
+                aspect = 9.0 / 19.5
             }
+            let shortDimension: CGFloat = max(150.0, min(190.0, round(maxDimension * aspect)))
+
+            let targetWidth: CGFloat = isLandscape ? maxDimension : shortDimension
+            let targetHeight: CGFloat = isLandscape ? shortDimension : maxDimension
+
+            // CRITICAL: Unlock AppKit minSize and maxSize constraints so the window can shrink to real phone size
+            window.minSize = NSSize(width: 100, height: 100)
+            window.contentMinSize = NSSize(width: 100, height: 100)
+            window.maxSize = NSSize(width: 500, height: 500)
+            window.contentMaxSize = NSSize(width: 500, height: 500)
+
+            window.level = .floating
+            window.isOpaque = false
+            window.backgroundColor = .clear
+            window.hasShadow = true
+            window.isMovableByWindowBackground = true
+
+            let screenFrame = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+            let newX = max(screenFrame.minX + 16, min(window.frame.origin.x, screenFrame.maxX - targetWidth - 20))
+            let newY = max(screenFrame.minY + 16, min(window.frame.origin.y, screenFrame.maxY - targetHeight - 20))
+
+            let targetFrame = NSRect(x: newX, y: newY, width: targetWidth, height: targetHeight)
+            window.setFrame(targetFrame, display: true, animate: animate)
         }
     }
 
