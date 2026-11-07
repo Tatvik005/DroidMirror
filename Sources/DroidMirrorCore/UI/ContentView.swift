@@ -34,6 +34,32 @@ public struct ContentView: View {
                 .aspectRatio(aspectRatio, contentMode: .fit)
                 .opacity(transport.isConnected ? 1.0 : 0.0)
 
+                // Authentic Smartphone Hardware Bezel Accents (Camera Notch & Home Bar)
+                if transport.isFloatingWindow {
+                    VStack {
+                        // Top Camera Punch-Hole & Speaker Earpiece
+                        Capsule()
+                            .fill(Color.black.opacity(0.85))
+                            .frame(width: 44, height: 7)
+                            .overlay(
+                                Circle()
+                                    .fill(Color(white: 0.28))
+                                    .frame(width: 3.5, height: 3.5)
+                                    .padding(.trailing, 24)
+                            )
+                            .padding(.top, 5)
+
+                        Spacer()
+
+                        // Bottom Home Indicator Bar
+                        Capsule()
+                            .fill(Color.white.opacity(0.45))
+                            .frame(width: 60, height: 3)
+                            .padding(.bottom, 6)
+                    }
+                    .allowsHitTesting(false)
+                }
+
                 // Controls Overlay
                 if transport.isConnected {
                     if transport.isFloatingWindow {
@@ -57,6 +83,27 @@ public struct ContentView: View {
                         .transition(.opacity)
                 }
             }
+            .clipShape(RoundedRectangle(cornerRadius: transport.isFloatingWindow ? 34 : 0, style: .continuous))
+            .overlay(
+                Group {
+                    if transport.isFloatingWindow {
+                        RoundedRectangle(cornerRadius: 34, style: .continuous)
+                            .strokeBorder(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.4),
+                                        Color.white.opacity(0.12),
+                                        Color.black.opacity(0.75)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 2.5
+                            )
+                    }
+                }
+            )
+            .shadow(color: Color.black.opacity(transport.isFloatingWindow ? 0.45 : 0.0), radius: transport.isFloatingWindow ? 18 : 0, x: 0, y: 8)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .animation(.easeInOut(duration: 0.25), value: transport.isConnected)
 
@@ -68,10 +115,10 @@ public struct ContentView: View {
             }
         }
         .frame(
-            minWidth: transport.isFloatingWindow ? 260 : 840,
-            maxWidth: transport.isFloatingWindow ? 380 : .infinity,
+            minWidth: transport.isFloatingWindow ? 240 : 840,
+            maxWidth: transport.isFloatingWindow ? 300 : .infinity,
             minHeight: transport.isFloatingWindow ? 480 : 680,
-            maxHeight: transport.isFloatingWindow ? 740 : .infinity
+            maxHeight: transport.isFloatingWindow ? 580 : .infinity
         )
         .sheet(isPresented: $transport.showPairingModal) {
             WirelessPairingModal(transport: transport)
@@ -149,8 +196,8 @@ public struct ContentView: View {
                 .buttonStyle(.plain)
                 .help("Exit Floating Phone Window (⇧⌘F)")
             }
-            .padding(.horizontal, 10)
-            .padding(.top, 10)
+            .padding(.horizontal, 8)
+            .padding(.top, 16)
 
             Spacer()
         }

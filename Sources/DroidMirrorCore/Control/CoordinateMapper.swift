@@ -28,16 +28,19 @@ public struct CoordinateMapper {
     public static func mapPoint(
         locationInView: CGPoint,
         viewSize: CGSize,
-        videoDimensions: (width: Int, height: Int)
+        videoDimensions: (width: Int, height: Int),
+        clamped: Bool = false
     ) -> (x: Int32, y: Int32)? {
         guard videoDimensions.width > 0 && videoDimensions.height > 0 else { return nil }
 
         let contentRect = calculateVideoContentRect(viewSize: viewSize, videoDimensions: videoDimensions)
-        guard contentRect.contains(locationInView) else { return nil }
+        if !clamped && !contentRect.contains(locationInView) {
+            return nil
+        }
 
-        let normX = (locationInView.x - contentRect.origin.x) / contentRect.width
+        let normX = (locationInView.x - contentRect.origin.x) / max(1.0, contentRect.width)
         // Flip Y because macOS origin is bottom-left, Android origin is top-left
-        let normY = (contentRect.size.height - (locationInView.y - contentRect.origin.y)) / contentRect.height
+        let normY = (contentRect.size.height - (locationInView.y - contentRect.origin.y)) / max(1.0, contentRect.height)
 
         let clampedX = max(0.0, min(1.0, normX))
         let clampedY = max(0.0, min(1.0, normY))

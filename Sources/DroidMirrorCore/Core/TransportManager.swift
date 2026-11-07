@@ -531,6 +531,9 @@ public final class TransportManager: ObservableObject {
                 // Exit floating mode
                 self.isFloatingWindow = false
                 window.level = .normal
+                window.isOpaque = true
+                window.backgroundColor = .windowBackgroundColor
+                window.isMovableByWindowBackground = false
 
                 let targetFrame = self.previousWindowFrame ?? NSRect(
                     x: window.frame.origin.x,
@@ -544,11 +547,15 @@ public final class TransportManager: ObservableObject {
                 self.previousWindowFrame = window.frame
                 self.isFloatingWindow = true
                 window.level = .floating
+                window.isOpaque = false
+                window.backgroundColor = .clear
+                window.hasShadow = true
+                window.isMovableByWindowBackground = true
 
                 // Phone-sized compact window:
-                // Sized to standard physical smartphone portrait proportions (~680pt height, ~314-340pt width)
-                // Even when the phone rotates to landscape, window stays in portrait phone bounds
-                let targetHeight: CGFloat = 680.0
+                // Sized to true physical smartphone dimensions (~560pt height, ~250-280pt width)
+                // Guaranteed to never exceed the physical screen size of a handheld smartphone
+                let targetHeight: CGFloat = 560.0
                 let w = CGFloat(self.resolution.width)
                 let h = CGFloat(self.resolution.height)
                 let portraitAspect: CGFloat
@@ -557,7 +564,7 @@ public final class TransportManager: ObservableObject {
                 } else {
                     portraitAspect = 9.0 / 19.5
                 }
-                let targetWidth: CGFloat = max(280.0, min(360.0, round(targetHeight * portraitAspect)))
+                let targetWidth: CGFloat = max(250.0, min(290.0, round(targetHeight * portraitAspect)))
 
                 let screenFrame = window.screen?.visibleFrame ?? NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
                 let newX = max(screenFrame.minX + 20, min(window.frame.origin.x, screenFrame.maxX - targetWidth - 24))
@@ -586,8 +593,8 @@ public final class TransportManager: ObservableObject {
             } else {
                 portraitAspect = 9.0 / 19.5
             }
-            let targetHeight: CGFloat = 680.0
-            let targetWidth: CGFloat = max(280.0, min(360.0, round(targetHeight * portraitAspect)))
+            let targetHeight: CGFloat = 560.0
+            let targetWidth: CGFloat = max(250.0, min(290.0, round(targetHeight * portraitAspect)))
 
             if abs(window.frame.width - targetWidth) > 2.0 || abs(window.frame.height - targetHeight) > 2.0 {
                 var currentFrame = window.frame

@@ -65,16 +65,33 @@ public final class InputCaptureNSView: NSView {
         return CoordinateMapper.calculateVideoContentRect(viewSize: bounds.size, videoDimensions: videoDimensions)
     }
 
-    private func mapToAndroidPoint(_ locationInView: NSPoint) -> (x: Int32, y: Int32)? {
-        return CoordinateMapper.mapPoint(locationInView: locationInView, viewSize: bounds.size, videoDimensions: videoDimensions)
+    private func mapToAndroidPoint(_ locationInView: NSPoint, clamped: Bool = false) -> (x: Int32, y: Int32)? {
+        return CoordinateMapper.mapPoint(locationInView: locationInView, viewSize: bounds.size, videoDimensions: videoDimensions, clamped: clamped)
     }
 
     // MARK: - Mouse Event Handling
 
+    private var initialMouseDownPoint: NSPoint?
+    private var lastValidAndroidPoint: (x: Int32, y: Int32)?
+    private var isDragging: Bool = false
+
+    public override func resetCursorRects() {
+        super.resetCursorRects()
+        addCursorRect(bounds, cursor: .arrow)
+    }
+
+    public override func cursorUpdate(with event: NSEvent) {
+        NSCursor.arrow.set()
+    }
+
     public override func mouseDown(with event: NSEvent) {
         window?.makeFirstResponder(self)
         let location = convert(event.locationInWindow, from: nil)
-        guard let pt = mapToAndroidPoint(location) else { return }
+        guard let pt = mapToAndroidPoint(location, clamped: false) else { return }
+
+        initialMouseDownPoint = location
+        lastValidAndroidPoint = pt
+        isDragging = false
 
         ControlInjector.shared.sendTouchEvent(
             action: 0, // ACTION_DOWN
@@ -91,7 +108,20 @@ public final class InputCaptureNSView: NSView {
 
     public override func mouseDragged(with event: NSEvent) {
         let location = convert(event.locationInWindow, from: nil)
-        guard let pt = mapToAndroidPoint(location) else { return }
+        // Enable clamped tracking so dragging scrolls and sliders smoothly right up to the display borders
+        guard let pt = mapToAndroidPoint(location, clamped: true) else { return }
+
+        // Suppress micro-jitter (<2.0 pt) on stationary clicks to avoid accidental micro-drags
+        if !isDragging, let down = initialMouseDownPoint {
+            let dx = location.x - down.x
+            let dy = location.y - down.y
+            if (dx * dx + dy * dy) < 4.0 {
+                return
+            }
+            isDragging = true
+        }
+
+        lastValidAndroidPoint = pt
 
         ControlInjector.shared.sendTouchEvent(
             action: 2, // ACTION_MOVE
@@ -108,8 +138,8 @@ public final class InputCaptureNSView: NSView {
 
     public override func mouseUp(with event: NSEvent) {
         let location = convert(event.locationInWindow, from: nil)
-        // If release happens outside, map to nearest edge
-        let pt = mapToAndroidPoint(location) ?? (x: 0, y: 0)
+        // Clamp touch release to display boundary instead of snapping to top-left (0, 0)
+        let pt = mapToAndroidPoint(location, clamped: true) ?? lastValidAndroidPoint ?? (x: Int32(videoDimensions.width / 2), y: Int32(videoDimensions.height / 2))
 
         ControlInjector.shared.sendTouchEvent(
             action: 1, // ACTION_UP
@@ -122,23 +152,37 @@ public final class InputCaptureNSView: NSView {
             actionButton: 1,
             buttons: 0
         )
+
+        initialMouseDownPoint = nil
+        lastValidAndroidPoint = nil
+        isDragging = false
     }
 
     public override func rightMouseDown(with event: NSEvent) {
-        // Android BACK action
+        // Right-Click -> Android BACK action
         ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.back.rawValue)
     }
 
     public override func otherMouseDown(with event: NSEvent) {
-        // Middle mouse button -> Android HOME action
-        if event.buttonNumber == 2 {
+        // Extended mouse navigation:
+        // Button 2 (Middle click) -> Android HOME
+        // Button 3 (Mouse side Back) -> Android BACK
+        // Button 4 (Mouse side Forward) -> Android RECENTS / APP SWITCHER
+        switch event.buttonNumber {
+        case 2:
             ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.home.rawValue)
+        case 3:
+            ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.back.rawValue)
+        case 4:
+            ControlInjector.shared.sendKeyClick(keycode: AndroidKeycode.appSwitch.rawValue)
+        default:
+            break
         }
     }
 
     public override func scrollWheel(with event: NSEvent) {
         let location = convert(event.locationInWindow, from: nil)
-        let pt = mapToAndroidPoint(location) ?? (x: Int32(videoDimensions.width / 2), y: Int32(videoDimensions.height / 2))
+        let pt = mapToAndroidPoint(location, clamped: true) ?? (x: Int32(videoDimensions.width / 2), y: Int32(videoDimensions.height / 2))
 
         // Differentiate smooth macOS trackpad deltas from notched mouse wheel ticks
         let factor: Float = event.hasPreciseScrollingDeltas ? 0.04 : 0.25
