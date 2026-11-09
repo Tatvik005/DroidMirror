@@ -28,10 +28,12 @@ DroidMirror **never** performs automatic background transport switching that cou
 3. **📱 Offline Phone Hotspot (Field Work):** Connects to the phone's AP gateway (`192.168.43.1`) with zero external internet required.
 
 ### 2. 🪟 Compact Floating Phone Window (Picture-in-Picture)
-- Shrinks the entire app to the exact physical aspect ratio of your smartphone (~680pt height).
-- Floats above all other Mac windows with full mouse and keyboard touch interactivity.
-- Embedded header with live FPS counter, Back, Home, Power, and 1-click restore button.
-- Toggle anytime via shortcut **⇧⌘F** or the toolbar button.
+- **Authentic Handheld Scale (≤ 6 inches):** Calibrated to realistic physical smartphone dimensions (under 6 inches diagonal, ~310×670pt portrait or ~670×310pt landscape) so it never dominates your workspace.
+- **Dynamic Auto-Orientation:** Automatically shifts between portrait and landscape modes matching your device orientation while strictly preserving compact phone scale.
+- **⌘ (Command) + Drag Anywhere:** Move the floating window anywhere on your screen by simply holding **⌘ (Command)** and dragging.
+- **Zero-Clutter Unobstructed Touch:** All intrusive top drag pills, simulated home bars, and bezel dragging have been removed so every tap, click, swipe, and scroll targets Android directly without moving the window accidentally.
+- **On-Hover Floating Controls:** Live FPS counter, Back, Home, Rotate, Power, and 1-click expand button smoothly fade in on hover and stay out of the way during operation.
+- **Toggle Anytime:** Toggle via shortcut **⇧⌘F** or the toolbar button.
 
 ### 3. 🛡️ Universal Smartphone Compatibility & Multi-Tier Codec Fallback
 Different phone chipsets and vendor skins handle video codecs differently. DroidMirror incorporates a 3-tier self-healing fallback engine:
@@ -165,6 +167,7 @@ swift run PhoneSimulator1000
 | Shortcut | Action |
 | :--- | :--- |
 | **⇧⌘F** | Toggle Compact Floating Phone Window |
+| **⌘ + Drag Anywhere** | Move Floating Phone Window smoothly |
 | **⌘?** | Open Switch Guide & Universal Phone Guide |
 | **⌘[** / **Right-Click** | Android Back Button |
 | **⌃⌘H** / **Middle-Click** | Android Home Button |

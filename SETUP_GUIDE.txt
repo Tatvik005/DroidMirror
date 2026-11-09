@@ -153,10 +153,16 @@ floating window that stays on top of your workspace:
 - Press:  Shift + Command + F  (⇧⌘F)
 
 The floating window provides:
-• Physical smartphone screen proportions (~680pt height).
+• True 1:1 smartphone handheld scale (≤ 6-inch diagonal, ~310x670 pt portrait,
+  ~670x310 pt landscape).
+• Dynamic auto-orientation that adapts when your phone rotates to landscape.
+• ⌘ (Command) + Drag Anywhere: Hold Command and drag from anywhere in the window
+  to smoothly reposition it.
+• Unobstructed touch: No bulky drag bars, bezels, or home bars to accidentally
+  trigger window moving—every swipe and tap goes directly to Android.
 • Floats on top while you work in other apps.
 • Full interactive mouse clicking, dragging, and typing.
-• Compact header with live FPS counter, Back, Home, Power, and Expand buttons.
+• Compact header with live FPS counter, Back, Home, Rotate, Power, and Expand buttons.
 
 ================================================================================
 7. DRAG-AND-DROP INSTALLATION & FILE TRANSFER
@@ -173,6 +179,7 @@ While your phone is mirrored:
 NAVIGATION & MOUSE:
   • Left-Click           -> Android Tap
   • Click & Drag         -> Android Swipe / Scroll
+  • ⌘ + Drag Anywhere    -> Move Floating Phone Window across screen
   • Right-Click          -> Android Back Button
   • Middle-Click         -> Android Home Button
   • Scroll-Wheel         -> Smooth vertical & horizontal scrolling
